@@ -25,7 +25,7 @@ const discord = new Client({
 // BOT ONLINE
 // ==========================================
 
-discord.once("ready", () => {
+discord.once("clientRead", () => {
   console.log(`Bot conectado como ${discord.user.tag}`);
 });
 
