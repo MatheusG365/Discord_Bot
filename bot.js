@@ -1,33 +1,54 @@
 import OpenAI from "openai";
 import "dotenv/config";
-import readline from "readline";
 import fs from "fs";
+
 import {
   Client,
   GatewayIntentBits
 } from "discord.js";
 
+
+// ==========================================
+// DISCORD
+// ==========================================
+
 const discord = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
+    GatewayIntentBits.MessageContent
+  ]
 });
+
+
+// ==========================================
+// BOT ONLINE
+// ==========================================
 
 discord.once("ready", () => {
   console.log(`Bot conectado como ${discord.user.tag}`);
 });
 
+
+// ==========================================
+// OPENROUTER / IA
+// ==========================================
+
 const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
+  apiKey: process.env.OPENROUTER_API_KEY
 });
+
+
+// ==========================================
+// INSTRUÇÕES DA IA
+// ==========================================
 
 const instructions = `
 Você é um assistente pessoal especializado exclusivamente no mundo geek.
 
 Você pode conversar somente sobre assuntos relacionados a:
+
 - jogos
 - videogames
 - PC Gaming
@@ -53,10 +74,15 @@ REGRAS IMPORTANTES:
 1. Nunca responda perguntas que não tenham relação com o mundo geek.
 
 2. Se a pergunta não estiver relacionada ao mundo geek, responda EXATAMENTE:
+
 "Desculpe, só posso responder perguntas relacionadas ao mundo geek."
 
-3. Se o usuário mandar uma saudação responda somente a saudação e "desculpe, só posso responder perguntas relacionadas ao mundo geek.", exemplo:
-"Olá (emoji feliz), desculpe, só posso responder perguntas relacionadas ao mundo geek.
+3. Se o usuário mandar uma saudação responda somente a saudação e
+"desculpe, só posso responder perguntas relacionadas ao mundo geek."
+
+Exemplo:
+
+"Olá! 😊 Desculpe, só posso responder perguntas relacionadas ao mundo geek."
 
 4. Não tente responder parcialmente perguntas fora do mundo geek.
 
@@ -72,19 +98,29 @@ Quem é o pai dele?
 
 A segunda pergunta continua sendo considerada geek por causa do contexto.
 
-5. Responda sempre em português do Brasil.
+6. Responda sempre em português do Brasil.
 
-6. Seja natural, amigável e objetivo.
+7. Seja natural, amigável e objetivo.
 
-7. Não invente informações.
+8. Não invente informações.
 `;
+
+
+// ==========================================
+// MODELOS
+// ==========================================
 
 const modelos = [
   "inclusionai/ling-3.0-flash-vl:free",
   "nex-agi/nex-n2.5-pro:free",
   "qwen/qwen3.8-27b:free",
-  "nvidia/nemotron-3.5-lightning:free",
+  "nvidia/nemotron-3.5-lightning:free"
 ];
+
+
+// ==========================================
+// ARQUIVO DE MEMÓRIA
+// ==========================================
 
 const ARQUIVO_MEMORIA = "./memoria.json";
 
@@ -96,7 +132,9 @@ let memorias = carregarMemorias();
 // ==========================================
 
 function carregarMemorias() {
+
   try {
+
     if (!fs.existsSync(ARQUIVO_MEMORIA)) {
       return {};
     }
@@ -109,6 +147,7 @@ function carregarMemorias() {
     return JSON.parse(dados);
 
   } catch (erro) {
+
     console.log("Erro ao carregar memória.");
 
     return {};
@@ -116,20 +155,30 @@ function carregarMemorias() {
 }
 
 
+// ==========================================
+// SALVAR MEMÓRIA
+// ==========================================
+
 function salvarMemorias() {
+
   try {
+
     fs.writeFileSync(
       ARQUIVO_MEMORIA,
       JSON.stringify(memorias, null, 2)
     );
 
   } catch (erro) {
+
     console.log("Erro ao salvar memória.");
   }
 }
 
 
-// Retorna apenas o histórico daquele usuário
+// ==========================================
+// PEGAR HISTÓRICO DO USUÁRIO
+// ==========================================
+
 function obterHistorico(userId) {
 
   if (!memorias[userId]) {
@@ -140,7 +189,10 @@ function obterHistorico(userId) {
 }
 
 
-// Adiciona uma mensagem na memória de um usuário
+// ==========================================
+// ADICIONAR NA MEMÓRIA
+// ==========================================
+
 function adicionarNaMemoria(
   userId,
   role,
@@ -151,7 +203,7 @@ function adicionarNaMemoria(
 
   historico.push({
     role,
-    content,
+    content
   });
 
   limitarMemoria(userId);
@@ -160,7 +212,10 @@ function adicionarNaMemoria(
 }
 
 
-// Mantém somente as últimas mensagens
+// ==========================================
+// LIMITAR MEMÓRIA
+// ==========================================
+
 function limitarMemoria(userId) {
 
   const LIMITE = 20;
@@ -168,13 +223,17 @@ function limitarMemoria(userId) {
   const historico = obterHistorico(userId);
 
   if (historico.length > LIMITE) {
+
     memorias[userId] =
       historico.slice(-LIMITE);
   }
 }
 
 
-// Limpa apenas a memória de determinado usuário
+// ==========================================
+// LIMPAR MEMÓRIA
+// ==========================================
+
 function limparMemoria(userId) {
 
   memorias[userId] = [];
@@ -184,7 +243,7 @@ function limparMemoria(userId) {
 
 
 // ==========================================
-// CLASSIFICA SE É GEEK
+// CLASSIFICAR SE É GEEK
 // ==========================================
 
 async function perguntaEhGeek(
@@ -295,11 +354,13 @@ Não explique sua resposta.
           model: modelo,
 
           input: [
+
             {
               role: "developer",
               content:
-                classificacaoInstructions,
+                classificacaoInstructions
             },
+
             {
               role: "user",
               content: `
@@ -310,9 +371,11 @@ ${historicoRecente || "Nenhum histórico."}
 Pergunta atual:
 
 ${userInput}
-`,
-            },
-          ],
+`
+            }
+
+          ]
+
         });
 
 
@@ -337,70 +400,107 @@ ${userInput}
   return false;
 }
 
+
+// ==========================================
+// DETECTAR SAUDAÇÃO
+// ==========================================
+
 function detectarSaudacao(texto) {
+
   const textoNormalizado = texto
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
+
   const saudacoes = [
+
     {
       regex: /^(oi|ola|opa|e ai|eai|salve|fala|hey|hello)\b/i,
-      resposta: "Olá! 😊",
+      resposta: "Olá! 😊"
     },
+
     {
       regex: /^bom dia\b/i,
-      resposta: "Bom dia! 😊",
+      resposta: "Bom dia! 😊"
     },
+
     {
       regex: /^boa tarde\b/i,
-      resposta: "Boa tarde! 😊",
+      resposta: "Boa tarde! 😊"
     },
+
     {
       regex: /^boa noite\b/i,
-      resposta: "Boa noite! 😊",
-    },
+      resposta: "Boa noite! 😊"
+    }
+
   ];
 
+
   for (const saudacao of saudacoes) {
+
     if (saudacao.regex.test(textoNormalizado)) {
+
       return {
         temSaudacao: true,
-        resposta: saudacao.resposta,
+        resposta: saudacao.resposta
       };
+
     }
   }
 
+
   return {
     temSaudacao: false,
-    resposta: "",
+    resposta: ""
   };
 }
 
 
+// ==========================================
+// REMOVER SAUDAÇÃO
+// ==========================================
+
 function removerSaudacao(texto) {
+
   let resultado = texto
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+
   const saudacoes = [
+
     /^(oi|ola|opa|e ai|eai|salve|fala|hey|hello)\b[,.!?;:\s-]*/i,
+
     /^bom dia\b[,.!?;:\s-]*/i,
+
     /^boa tarde\b[,.!?;:\s-]*/i,
-    /^boa noite\b[,.!?;:\s-]*/i,
+
+    /^boa noite\b[,.!?;:\s-]*/i
+
   ];
 
+
   for (const regex of saudacoes) {
+
     if (regex.test(resultado)) {
-      resultado = resultado.replace(regex, "");
+
+      resultado = resultado.replace(
+        regex,
+        ""
+      );
+
       break;
     }
   }
 
+
   return resultado.trim();
 }
+
 
 // ==========================================
 // IA PRINCIPAL
@@ -411,19 +511,22 @@ async function perguntarIA(
   userInput
 ) {
 
-  const saudacao = detectarSaudacao(userInput);
+  const saudacao =
+    detectarSaudacao(userInput);
+
 
   let perguntaParaIA = userInput;
 
-  // Se começou com uma saudação, remove ela para analisar
-  // somente o restante da mensagem.
+
   if (saudacao.temSaudacao) {
-    perguntaParaIA = removerSaudacao(userInput);
+
+    perguntaParaIA =
+      removerSaudacao(userInput);
   }
 
 
   // ==========================================
-  // USUÁRIO MANDOU SOMENTE UMA SAUDAÇÃO
+  // SOMENTE SAUDAÇÃO
   // ==========================================
 
   if (
@@ -431,22 +534,19 @@ async function perguntarIA(
     !perguntaParaIA.trim()
   ) {
 
-    console.log(
-      `\nGeekBot:\n${saudacao.resposta}\n`
-    );
-
     return saudacao.resposta;
   }
 
 
   // ==========================================
-  // VERIFICA SE A PERGUNTA É GEEK
+  // VERIFICA SE É GEEK
   // ==========================================
 
-  const geek = await perguntaEhGeek(
-    userId,
-    perguntaParaIA
-  );
+  const geek =
+    await perguntaEhGeek(
+      userId,
+      perguntaParaIA
+    );
 
 
   // ==========================================
@@ -459,17 +559,11 @@ async function perguntarIA(
       "Desculpe, só posso responder perguntas relacionadas ao mundo geek.";
 
 
-    // Se também teve saudação
     if (saudacao.temSaudacao) {
 
       mensagem =
         `${saudacao.resposta} ${mensagem}`;
     }
-
-
-    console.log(
-      `\nGeekBot:\n${mensagem}\n`
-    );
 
 
     return mensagem;
@@ -489,22 +583,24 @@ async function perguntarIA(
     try {
 
       console.log(
-        `\nTentando modelo: ${modelo}`
+        `Tentando modelo: ${modelo}`
       );
 
 
       const input = [
+
         {
           role: "developer",
-          content: instructions,
+          content: instructions
         },
 
         ...historico,
 
         {
           role: "user",
-          content: perguntaParaIA,
-        },
+          content: perguntaParaIA
+        }
+
       ];
 
 
@@ -515,28 +611,14 @@ async function perguntarIA(
 
           stream: true,
 
-          input,
+          input
         });
-
-
-      console.log(
-        `Modelo usado: ${modelo}`
-      );
-
-
-      console.log("\nGeekBot:\n");
 
 
       let respostaCompleta = "";
 
 
-      // Se o usuário começou com saudação,
-      // responde primeiro a saudação.
       if (saudacao.temSaudacao) {
-
-        process.stdout.write(
-          saudacao.resposta + "\n\n"
-        );
 
         respostaCompleta +=
           saudacao.resposta + "\n\n";
@@ -550,16 +632,12 @@ async function perguntarIA(
           "response.output_text.delta"
         ) {
 
-          const texto = event.delta;
+          const texto =
+            event.delta;
 
           respostaCompleta += texto;
-
-          process.stdout.write(texto);
         }
       }
-
-
-      console.log("\n");
 
 
       adicionarNaMemoria(
@@ -576,22 +654,25 @@ async function perguntarIA(
       );
 
 
+      console.log(
+        `Modelo usado: ${modelo}`
+      );
+
+
       return respostaCompleta;
 
 
     } catch (erro) {
 
       console.log(
-        `\nErro no modelo ${modelo}`
+        `Erro no modelo ${modelo}`
       );
-
 
       console.log(
         erro?.error?.message ||
         erro?.message ||
         "Erro desconhecido"
       );
-
 
       console.log(
         "Tentando próximo modelo..."
@@ -600,57 +681,34 @@ async function perguntarIA(
   }
 
 
-  const mensagem =
-    "Os modelos de IA estão indisponíveis no momento. Tente novamente depois.";
-
-
-  console.log(
-    `\nGeekBot: ${mensagem}`
-  );
-
-
-  return mensagem;
+  return "Os modelos de IA estão indisponíveis no momento. Tente novamente depois.";
 }
 
 
 // ==========================================
-// TERMINAL PARA TESTE
+// RECEBER MENSAGENS DO DISCORD
 // ==========================================
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+discord.on(
+  "messageCreate",
+  async (message) => {
+
+    // Ignora mensagens de outros bots
+    if (message.author.bot) return;
 
 
-// Por enquanto simulamos um usuário.
-// No Discord isso será message.author.id
-const USUARIO_TESTE = "usuario_terminal";
+    const texto =
+      message.content.trim();
 
 
-function perguntarNoTerminal() {
-
-  rl.question(
-    "Você: ",
-    async (pergunta) => {
-
-      const texto =
-        pergunta.trim();
+    if (!texto) return;
 
 
-      if (
-        texto.toLowerCase() === "sair"
-      ) {
+    try {
 
-        console.log(
-          "\nGeekBot: Até mais!"
-        );
-
-        rl.close();
-
-        return;
-      }
-
+      // ==========================================
+      // LIMPAR MEMÓRIA
+      // ==========================================
 
       if (
         texto.toLowerCase() ===
@@ -658,50 +716,122 @@ function perguntarNoTerminal() {
       ) {
 
         limparMemoria(
-          USUARIO_TESTE
+          message.author.id
         );
 
-        console.log(
-          "\nGeekBot: Sua memória foi apagada.\n"
+
+        await message.reply(
+          "Sua memória foi apagada. 🧠"
         );
 
-        perguntarNoTerminal();
 
         return;
       }
 
 
-      if (!texto) {
+      // ==========================================
+      // MOSTRAR DIGITANDO
+      // ==========================================
 
-        perguntarNoTerminal();
+      await message.channel.sendTyping();
 
-        return;
+
+      // ==========================================
+      // PERGUNTAR PARA A IA
+      // ==========================================
+
+      const resposta =
+        await perguntarIA(
+          message.author.id,
+          texto
+        );
+
+
+      if (!resposta) return;
+
+
+      // ==========================================
+      // DISCORD TEM LIMITE DE 2000 CARACTERES
+      // ==========================================
+
+      const partes =
+        resposta.match(
+          /[\s\S]{1,1900}/g
+        ) || [];
+
+
+      // ==========================================
+      // ENVIAR RESPOSTA
+      // ==========================================
+
+      if (partes.length > 0) {
+
+        await message.reply(
+          partes[0]
+        );
       }
 
 
-      await perguntarIA(
-        USUARIO_TESTE,
-        texto
+      // ==========================================
+      // ENVIAR PARTES RESTANTES
+      // ==========================================
+
+      for (
+        let i = 1;
+        i < partes.length;
+        i++
+      ) {
+
+        await message.channel.send(
+          partes[i]
+        );
+      }
+
+
+    } catch (erro) {
+
+      console.error(
+        "Erro ao responder mensagem no Discord:",
+        erro
       );
 
 
-      perguntarNoTerminal();
+      try {
+
+        await message.reply(
+          "Desculpe, aconteceu um erro ao processar sua pergunta. Tente novamente."
+        );
+
+      } catch (erroResposta) {
+
+        console.error(
+          "Também não foi possível enviar a mensagem de erro:",
+          erroResposta
+        );
+      }
     }
-  );
-}
-
-
-console.log("GeekBot iniciado!");
-
-console.log(
-  'Digite "sair" para encerrar.'
-);
-
-console.log(
-  'Digite "limpar memoria" para apagar sua memória.\n'
+  }
 );
 
 
-// perguntarNoTerminal();
+// ==========================================
+// LOGIN DO BOT
+// ==========================================
 
-discord.login(process.env.DISCORD_TOKEN);
+discord
+  .login(process.env.DISCORD_TOKEN)
+  .then(() => {
+
+    console.log(
+      "Login do Discord realizado com sucesso."
+    );
+
+  })
+  .catch((erro) => {
+
+    console.error(
+      "Erro ao conectar ao Discord:",
+      erro
+    );
+
+  });
